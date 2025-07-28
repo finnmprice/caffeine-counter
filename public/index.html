@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Caffeine Tracker</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <h1>Caffeine Tracker</h1>
+      </header>
+
+      <section class="stats">
+        <div class="stat">
+          <span id="todayTotal">0</span>
+          <label>mg Today</label>
+        </div>
+        <div class="stat">
+          <span id="todayCount">0</span>
+          <label>Entries Today</label>
+        </div>
+        <div class="stat">
+          <span id="allTimeTotal">0</span>
+          <label>mg All Time</label>
+        </div>
+      </section>
+
+      <main class="main">
+        <div class="drinks-panel">
+          <div class="panel-title">Drinks</div>
+          <div id="drinksGrid" class="drinks-grid">
+            <div class="drink-card add-drink" onclick="showAddDrinkModal()">
+              <div class="plus">+</div>
+              <div class="label">Add Drink</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="entries-panel">
+          <div class="panel-title">Recent Entries</div>
+          <div id="entriesList" class="entries-list">
+            <div class="loading">Loading...</div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Add Drink Modal -->
+      <div id="addDrinkModal" class="modal">
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2>Add New Drink</h2>
+            <button onclick="closeAddDrinkModal()">&times;</button>
+          </div>
+          <form id="addDrinkForm">
+            <label>Name</label>
+            <input autocomplete="off" type="text" id="drinkName" required />
+
+            <label>Image URL (optional)</label>
+            <input autocomplete="off" type="url" id="imageUrl" />
+
+            <label>Size Variants</label>
+            <div id="sizeVariants">
+              <div class="size-variant">
+                <input
+                  type="text"
+                  placeholder="Size name (e.g., 12oz)"
+                  class="size-name"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Caffeine (mg)"
+                  class="size-caffeine"
+                  required
+                  min="1"
+                />
+                <button
+                  type="button"
+                  onclick="removeSizeVariant(this)"
+                  class="remove-size"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onclick="addSizeVariant()"
+              class="add-size-btn"
+            >
+              + Add Size
+            </button>
+
+            <button type="submit">Add Drink</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Size Selection Modal -->
+      <div id="sizeSelectionModal" class="modal">
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2 id="sizeModalTitle">Select Size</h2>
+            <button onclick="closeSizeSelectionModal()">&times;</button>
+          </div>
+          <div id="sizeOptions" class="size-options">
+            <!-- Size options will be populated here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Entry Modal -->
+      <div id="addEntryModal" class="modal">
+        <div class="modal-box">
+          <div class="modal-header">
+            <h2 id="entryModalTitle">Add Entry</h2>
+            <button onclick="closeAddEntryModal()">&times;</button>
+          </div>
+          <form id="addEntryForm">
+            <div id="selectedDrinkInfo" class="selected-info"></div>
+            <label>Custom Description (optional)</label>
+            <textarea id="customDescription"></textarea>
+            <button type="submit">Add Entry</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="toast" class="toast"></div>
+
+      <script src="script.js"></script>
+    </div>
+  </body>
+</html>
