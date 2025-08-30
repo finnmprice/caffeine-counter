@@ -5,46 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Caffeine Tracker</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
-    <div class="app">
-      <header class="app-header">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+      <div class="login-container">
         <h1>Caffeine Tracker</h1>
+        <p>Track and compete with others on caffeine consumption</p>
+        <div
+          id="g_id_onload"
+          data-client_id="234386211848-jdc12q4obaau1nvpfu9lseq7j41hrrc9.apps.googleusercontent.com"
+          data-callback="handleCredentialResponse"
+          data-auto_prompt="false"
+        ></div>
+        <div
+          class="g_id_signin"
+          data-type="standard"
+          data-size="large"
+          data-theme="filled_blue"
+          data-text="sign_in_with"
+          data-shape="rectangular"
+          data-logo_alignment="left"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="app" style="display: none">
+      <header class="app-header">
+        <div class="header-content">
+          <h1>Caffeine Tracker</h1>
+          <div class="user-info">
+            <img id="userAvatar" src="" alt="User Avatar" class="user-avatar" />
+            <span id="userName"></span>
+            <button onclick="signOut()" class="sign-out-btn">Sign Out</button>
+          </div>
+        </div>
       </header>
 
-      <section class="stats">
-        <div class="stat">
-          <span id="todayTotal">0</span>
-          <label>mg Today</label>
-        </div>
-        <div class="stat">
-          <span id="todayCount">0</span>
-          <label>Entries Today</label>
-        </div>
-        <div class="stat">
-          <span id="allTimeTotal">0</span>
-          <label>mg All Time</label>
-        </div>
-      </section>
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="tab-btn active" onclick="showTab('tracker')">
+          Tracker
+        </button>
+        <button class="tab-btn" onclick="showTab('leaderboard')">
+          Leaderboard
+        </button>
+      </nav>
 
-      <main class="main">
-        <div class="drinks-panel">
-          <div class="panel-title">Drinks</div>
-          <div id="drinksGrid" class="drinks-grid">
-            <div class="drink-card add-drink" onclick="showAddDrinkModal()">
-              <div class="plus">+</div>
-              <div class="label">Add Drink</div>
+      <!-- Tracker Tab -->
+      <div id="trackerTab" class="tab-content active">
+        <section class="stats">
+          <div class="stat">
+            <span id="todayTotal">0</span>
+            <label>mg Today</label>
+          </div>
+          <div class="stat">
+            <span id="todayCount">0</span>
+            <label>Entries Today</label>
+          </div>
+          <div class="stat">
+            <span id="allTimeTotal">0</span>
+            <label>mg All Time</label>
+          </div>
+        </section>
+
+        <main class="main">
+          <div class="drinks-panel">
+            <div class="panel-title">Drinks</div>
+            <div id="drinksGrid" class="drinks-grid">
+              <div class="drink-card add-drink" onclick="showAddDrinkModal()">
+                <div class="plus">+</div>
+                <div class="label">Add Drink</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="entries-panel">
-          <div class="panel-title">Recent Entries</div>
-          <div id="entriesList" class="entries-list">
-            <div class="loading">Loading...</div>
+          <div class="entries-panel">
+            <div class="panel-title">Recent Entries</div>
+            <div id="entriesList" class="entries-list">
+              <div class="loading">Loading...</div>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
+
+      <!-- Leaderboard Tab -->
+      <div id="leaderboardTab" class="tab-content">
+        <section class="leaderboard-section">
+          <div class="leaderboard-header">
+            <h2>Caffeine Leaderboard</h2>
+            <div class="period-selector">
+              <button class="period-btn active" onclick="changePeriod('week')">
+                This Week
+              </button>
+              <button class="period-btn" onclick="changePeriod('month')">
+                This Month
+              </button>
+              <button class="period-btn" onclick="changePeriod('all')">
+                All Time
+              </button>
+            </div>
+          </div>
+          <div id="leaderboardContent" class="leaderboard-content">
+            <div class="loading">Loading leaderboard...</div>
+          </div>
+        </section>
+      </div>
 
       <!-- Add Drink Modal -->
       <div id="addDrinkModal" class="modal">
@@ -121,7 +189,10 @@
           <form id="addEntryForm">
             <div id="selectedDrinkInfo" class="selected-info"></div>
             <label>Custom Description (optional)</label>
-            <textarea id="customDescription"></textarea>
+            <textarea
+              id="customDescription"
+              placeholder="Add any notes about this drink..."
+            ></textarea>
             <button type="submit">Add Entry</button>
           </form>
         </div>
