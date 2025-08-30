@@ -3,6 +3,7 @@ let selectedDrink = null;
 let selectedSize = null;
 let currentUser = null;
 let currentPeriod = "week";
+let caffeineChart = null;
 
 // On DOM ready
 window.addEventListener("DOMContentLoaded", () => {
@@ -100,6 +101,15 @@ function initializeApp() {
   loadDrinkTypes();
   loadEntries();
   loadLeaderboard();
+
+  // Small delay to ensure DOM is ready for chart
+  setTimeout(() => {
+    if (
+      document.getElementById("leaderboardTab").classList.contains("active")
+    ) {
+      loadCaffeineChart();
+    }
+  }, 100);
 }
 
 // Tab functionality
@@ -123,6 +133,10 @@ function showTab(tabName) {
   // Load leaderboard data if switching to leaderboard
   if (tabName === "leaderboard") {
     loadLeaderboard();
+    // Small delay to ensure tab content is visible
+    setTimeout(() => {
+      loadCaffeineChart();
+    }, 100);
   }
 }
 
@@ -496,14 +510,18 @@ addEntryForm?.addEventListener("submit", async (e) => {
 
   const desc = document.getElementById("customDescription").value.trim();
 
+  // ✅ Capture names early (in case modal resets globals)
+  const drinkName = selectedDrink.name;
+  const sizeName = selectedSize.name;
+
   try {
     const res = await fetch("/api/entries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        drinkName: selectedDrink.name,
-        sizeName: selectedSize.name,
+        drinkName,
+        sizeName,
         caffeineMg: selectedSize.caffeineMg,
         customDescription: desc,
         isCustomDrink: false,
@@ -518,7 +536,8 @@ addEntryForm?.addEventListener("submit", async (e) => {
     closeAddEntryModal();
     loadStats();
     loadEntries();
-    showToast(`${selectedSize.name} ${selectedDrink.name} added!`, "success");
+
+    showToast(`${sizeName} ${drinkName} added!`, "success");
   } catch (err) {
     console.error("Error adding entry", err);
     showToast(err.message || "Could not add entry", "error");
@@ -623,7 +642,22 @@ function changePeriod(period) {
   });
   event.target.classList.add("active");
 
+  // Update graph period display
+  updateGraphPeriodDisplay(period);
+
   loadLeaderboard();
+  loadCaffeineChart();
+}
+
+function updateGraphPeriodDisplay(period) {
+  const graphPeriodElement = document.getElementById("graphPeriod");
+  const periodMap = {
+    week: "Last 7 Days",
+    month: "Last 30 Days",
+    year: "Last 365 Days",
+    all: "All Time",
+  };
+  graphPeriodElement.textContent = periodMap[period] || "Last 7 Days";
 }
 
 async function loadLeaderboard() {
@@ -658,16 +692,16 @@ function renderLeaderboard(data) {
       const rank = index + 1;
       const isCurrentUser = currentUser && user.userId === currentUser.googleId;
 
-      // Medal/rank display
-      let rankDisplay;
-      if (rank === 1) rankDisplay = "🥇";
-      else if (rank === 2) rankDisplay = "🥈";
-      else if (rank === 3) rankDisplay = "🥉";
-      else rankDisplay = `#${rank}`;
+      // Rank badge
+      let rankBadge;
+      if (rank === 1) rankBadge = `<div class="rank-badge gold">1</div>`;
+      else if (rank === 2) rankBadge = `<div class="rank-badge silver">2</div>`;
+      else if (rank === 3) rankBadge = `<div class="rank-badge bronze">3</div>`;
+      else rankBadge = `<div class="rank-badge other">${rank}</div>`;
 
       return `
       <div class="leaderboard-item ${isCurrentUser ? "current-user" : ""}">
-        <div class="rank">${rankDisplay}</div>
+        <div class="rank">${rankBadge}</div>
         <div class="user-info">
           ${
             user.userAvatar
@@ -679,14 +713,14 @@ function renderLeaderboard(data) {
           <div class="user-details">
             <div class="user-name">${escapeHtml(
               user.userName || "Unknown User"
-            )}</div>
-            <div class="user-stats">${user.entryCount} entries</div>
+            )}${isCurrentUser ? " (You)" : ""}</div>
+            <div class="user-stats">${user.entryCount} drinks</div>
           </div>
         </div>
         <div class="caffeine-total">
           <span class="caffeine-amount">${Math.round(
             user.totalCaffeine
-          )} mg</span>
+          )}<span class="caffeine-unit">mg</span></span>
         </div>
       </div>
     `;
@@ -698,6 +732,158 @@ function renderLeaderboard(data) {
       ${leaderboardHTML}
     </div>
   `;
+}
+
+// Chart functionality
+function loadCaffeineChart() {
+  const ctx = document.getElementById("caffeineChart").getContext("2d");
+
+  if (caffeineChart) caffeineChart.destroy();
+
+  fetch(`/api/caffeine-chart?period=${currentPeriod}`, {
+    credentials: "include",
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, "rgba(0, 198, 255, 0.4)");
+      gradient.addColorStop(1, "rgba(0, 198, 255, 0)");
+
+      caffeineChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              label: "Caffeine (mg)",
+              data: data.values,
+              fill: true,
+              backgroundColor: gradient,
+              borderColor: "#00c6ff",
+              borderWidth: 2,
+              tension: 0.4,
+              pointBackgroundColor: "#0072ff",
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const mg = ctx.parsed.y;
+                  const pct = Math.round((mg / 400) * 100);
+                  return `${mg} mg (${pct}% of daily safe limit)`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: { grid: { color: "rgba(255,255,255,0.05)" } },
+            y: { grid: { color: "rgba(255,255,255,0.05)" } },
+          },
+        },
+      });
+    });
+}
+
+function renderCaffeineChart(data) {
+  const canvas = document.getElementById("caffeineChart");
+  const ctx = canvas.getContext("2d");
+
+  // Destroy existing chart
+  if (caffeineChart) {
+    caffeineChart.destroy();
+  }
+
+  // Set canvas size
+  canvas.width = canvas.parentElement.clientWidth - 32;
+  canvas.height = 200;
+
+  caffeineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: data.labels,
+      datasets: [
+        {
+          label: "Caffeine (mg)",
+          data: data.values,
+          borderColor: "#00c6ff",
+          backgroundColor: "rgba(0, 198, 255, 0.1)",
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: "#00c6ff",
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#888",
+            font: {
+              size: 11,
+            },
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.1)",
+            drawBorder: false,
+          },
+        },
+        y: {
+          ticks: {
+            color: "#888",
+            font: {
+              size: 11,
+            },
+            callback: function (value) {
+              return value + "mg";
+            },
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.1)",
+            drawBorder: false,
+          },
+        },
+      },
+      elements: {
+        point: {
+          hoverBackgroundColor: "#ffffff",
+          hoverBorderColor: "#00c6ff",
+        },
+      },
+    },
+  });
+}
+
+function renderFallbackChart() {
+  const canvas = document.getElementById("caffeineChart");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = canvas.parentElement.clientWidth - 32;
+  canvas.height = 200;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#888";
+  ctx.font = "16px Inter, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Chart data unavailable", canvas.width / 2, canvas.height / 2);
 }
 
 function formatTime(timestamp) {
@@ -763,12 +949,13 @@ setInterval(() => {
       const leaderboardTab = document.getElementById("leaderboardTab");
       if (leaderboardTab && leaderboardTab.classList.contains("active")) {
         loadLeaderboard();
+        loadCaffeineChart();
       }
     }
   }
 }, 30000);
 
-// Service Worker registration for offline support (optional)
+// Service Worker registration for offline support
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker

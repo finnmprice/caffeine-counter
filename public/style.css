@@ -559,24 +559,36 @@ body {
   background: #ff3742;
 }
 
-/* Leaderboard */
+/* Leaderboard Section */
 .leaderboard-section {
   flex: 1;
   padding: 2rem;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   width: 100%;
 }
 
 .leaderboard-header {
-  text-align: center;
   margin-bottom: 2rem;
+  text-align: center;
+}
+
+.leaderboard-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.trophy-icon {
+  font-size: 2rem;
 }
 
 .leaderboard-header h2 {
   font-size: 2rem;
   color: #f0f0f0;
-  margin-bottom: 1rem;
+  margin: 0;
   font-weight: 600;
 }
 
@@ -585,14 +597,15 @@ body {
   justify-content: center;
   gap: 0.5rem;
   flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
 .period-btn {
-  background: transparent;
+  background: #232935;
   color: #ccc;
-  border: 2px solid #444;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
@@ -600,7 +613,7 @@ body {
 }
 
 .period-btn:hover {
-  border-color: #00c6ff;
+  background: #2a3040;
   color: #00c6ff;
 }
 
@@ -610,8 +623,37 @@ body {
   border-color: #00c6ff;
 }
 
+/* Graph Card */
+.graph-card {
+  background: #1a1e28;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.graph-header h3 {
+  color: #f0f0f0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.graph-period {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+/* Leaderboard Content */
 .leaderboard-content {
-  background: #1b1f27;
+  background: #1a1e28;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -626,34 +668,61 @@ body {
   display: flex;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: #1f232e;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background 0.3s ease;
+  background: #232935;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-.leaderboard-item:last-child {
-  border-bottom: none;
+.leaderboard-item:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .leaderboard-item:hover {
-  background: #252a36;
+  background: #2a3040;
 }
 
 .leaderboard-item.current-user {
   background: rgba(0, 198, 255, 0.1);
-  border-left: 4px solid #00c6ff;
-}
-
-.leaderboard-item.current-user:hover {
-  background: rgba(0, 198, 255, 0.15);
 }
 
 .rank {
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  margin-right: 1rem;
+}
+
+.rank-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1rem;
   font-weight: bold;
-  color: #00c6ff;
-  min-width: 50px;
-  text-align: center;
+}
+
+.rank-badge.gold {
+  background: #ffd700;
+  color: #000;
+}
+
+.rank-badge.silver {
+  background: #c0c0c0;
+  color: #000;
+}
+
+.rank-badge.bronze {
+  background: #cd7f32;
+  color: #fff;
+}
+
+.rank-badge.other {
+  background: #444;
+  color: #fff;
+  font-size: 0.9rem;
 }
 
 .user-info {
@@ -667,7 +736,8 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid #00c6ff;
+  border: 2px solid #333;
+  object-fit: cover;
 }
 
 .leaderboard-avatar-placeholder {
@@ -681,6 +751,7 @@ body {
   color: white;
   font-weight: bold;
   font-size: 1.2rem;
+  border: 2px solid #333;
 }
 
 .user-details {
@@ -691,6 +762,7 @@ body {
   font-weight: 600;
   color: #f0f0f0;
   font-size: 1rem;
+  margin-bottom: 2px;
 }
 
 .user-stats {
@@ -700,12 +772,21 @@ body {
 
 .caffeine-total {
   text-align: right;
+  margin-left: 1rem;
 }
 
 .caffeine-amount {
   font-size: 1.2rem;
   font-weight: bold;
   color: #00c6ff;
+  display: block;
+  line-height: 1;
+}
+
+.caffeine-unit {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: normal;
 }
 
 /* Modals */
@@ -955,17 +1036,33 @@ form button[type="submit"]:hover {
     padding: 1rem;
   }
 
+  .leaderboard-title {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
   .leaderboard-header h2 {
     font-size: 1.5rem;
   }
 
   .period-selector {
-    gap: 0.25rem;
+    flex-wrap: wrap;
   }
 
   .period-btn {
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 1rem;
     font-size: 0.8rem;
+    min-width: 70px;
+  }
+
+  .graph-card {
+    padding: 1rem;
+  }
+
+  .graph-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .leaderboard-item {
@@ -976,25 +1073,34 @@ form button[type="submit"]:hover {
 
   .rank {
     min-width: 40px;
-    font-size: 1rem;
+    margin-right: 0.5rem;
+  }
+
+  .rank-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
   }
 
   .user-info {
     gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .leaderboard-avatar,
   .leaderboard-avatar-placeholder {
-    width: 35px;
-    height: 35px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
   }
 
   .user-name {
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
 
   .caffeine-amount {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
 
   .size-variant {
@@ -1091,14 +1197,31 @@ form button[type="submit"]:hover {
     font-size: 1.3rem;
   }
 
+  .period-btn {
+    flex: 1;
+    min-width: 60px;
+  }
+
   .leaderboard-item {
     padding: 0.75rem;
   }
 
+  .user-name {
+    font-size: 0.95rem;
+  }
+
+  .user-stats {
+    font-size: 0.8rem;
+  }
+
+  .caffeine-amount {
+    font-size: 1.1rem;
+  }
+
   .leaderboard-avatar,
   .leaderboard-avatar-placeholder {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
   }
 
   .modal-box {

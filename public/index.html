@@ -6,6 +6,7 @@
     <title>Caffeine Tracker</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   </head>
   <body>
     <!-- Login Screen -->
@@ -95,19 +96,36 @@
       <div id="leaderboardTab" class="tab-content">
         <section class="leaderboard-section">
           <div class="leaderboard-header">
-            <h2>Caffeine Leaderboard</h2>
+            <div class="leaderboard-title">
+              <span class="trophy-icon">🏆</span>
+              <h2>Leaderboard</h2>
+            </div>
             <div class="period-selector">
               <button class="period-btn active" onclick="changePeriod('week')">
-                This Week
+                Week
               </button>
               <button class="period-btn" onclick="changePeriod('month')">
-                This Month
+                Month
+              </button>
+              <button class="period-btn" onclick="changePeriod('year')">
+                Year
               </button>
               <button class="period-btn" onclick="changePeriod('all')">
                 All Time
               </button>
             </div>
           </div>
+
+          <!-- Caffeine Consumption Graph -->
+          <div class="graph-card">
+            <div class="graph-header">
+              <h3>Caffeine Consumption Over Time</h3>
+              <div class="graph-period" id="graphPeriod">Last 7 Days</div>
+            </div>
+            <canvas id="caffeineChart" width="400" height="200"></canvas>
+          </div>
+
+          <!-- Leaderboard Rankings -->
           <div id="leaderboardContent" class="leaderboard-content">
             <div class="loading">Loading leaderboard...</div>
           </div>

@@ -112,25 +112,13 @@ const sizeVariantSchema = new mongoose.Schema({
 // Updated Drink Type Schema with size variants
 const drinkTypeSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    imageUrl: {
-      type: String,
-      default: "/images/noImage.png",
-      trim: true,
-    },
-    sizes: [sizeVariantSchema], // Array of size variants
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
+    name: { type: String, required: true, trim: true },
+    imageUrl: { type: String, default: "/images/noImage.png", trim: true },
+    sizes: [sizeVariantSchema],
+    createdAt: { type: Date, default: Date.now },
+    deleted: { type: Boolean, default: false },
   },
-  {
-    collection: "types",
-  }
+  { collection: "types" }
 );
 
 // Updated Caffeine Entry Schema with user info
@@ -281,7 +269,7 @@ app.post("/api/auth/logout", (req, res) => {
 // Get all drink types
 app.get("/api/types", requireAuth, async (req, res) => {
   try {
-    const types = await DrinkType.find().sort({ name: 1 });
+    const types = await DrinkType.find({ deleted: false }).sort({ name: 1 });
     res.json(types);
   } catch (error) {
     console.error(chalk.red("Error fetching drink types:"), error);
@@ -325,7 +313,7 @@ app.post("/api/types", requireAuth, async (req, res) => {
 
     const savedType = await newType.save();
     res.status(201).json(savedType);
-    console.log(chalk.green(`New drink type added: ${savedType.name}`));
+    console.log(chalk.white(`New drink type added: ${savedType.name}`));
   } catch (error) {
     console.error(chalk.red("Error saving drink type:"), error);
     res.status(500).json({ error: "Failed to save drink type" });
@@ -380,7 +368,7 @@ app.post("/api/entries", requireAuth, async (req, res) => {
     const savedEntry = await newEntry.save();
     res.status(201).json(savedEntry);
     console.log(
-      chalk.green(
+      chalk.gray(
         `New entry added for user ${req.session.user.email}: ${savedEntry.fullName} (${savedEntry.caffeineMg}mg)`
       )
     );
@@ -433,6 +421,7 @@ app.delete("/api/entries/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const entry = await CaffeineEntry.findById(id);
+    const user = req.session.user;
 
     if (!entry) {
       return res.status(404).json({ error: "Entry not found" });
@@ -445,9 +434,15 @@ app.delete("/api/entries/:id", requireAuth, async (req, res) => {
         .json({ error: "Not authorized to delete this entry" });
     }
 
+    // Drink description
+    const drinkDesc = `${entry.sizeName} ${entry.drinkName} (${entry.caffeineMg}mg)`;
+
     await CaffeineEntry.findByIdAndDelete(id);
     res.json({ message: "Entry deleted successfully" });
-    console.log(chalk.yellow(`Entry deleted: ${id}`));
+
+    console.log(
+      chalk.yellow(`Entry deleted: ${user.name} deleted ${drinkDesc}`)
+    );
   } catch (error) {
     console.error(chalk.red("Error deleting entry:"), error);
     res.status(500).json({ error: "Failed to delete entry" });
@@ -458,14 +453,24 @@ app.delete("/api/entries/:id", requireAuth, async (req, res) => {
 app.delete("/api/types/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedType = await DrinkType.findByIdAndDelete(id);
+    const drink = await DrinkType.findById(id);
+    const user = req.session.user;
 
-    if (!deletedType) {
+    if (!drink) {
       return res.status(404).json({ error: "Drink type not found" });
     }
 
-    res.json({ message: "Drink type deleted successfully" });
-    console.log(chalk.yellow(`Drink type deleted: ${deletedType.name}`));
+    if (drink.deleted) {
+      return res.status(400).json({ error: "Drink type already deleted" });
+    }
+
+    drink.deleted = true;
+    await drink.save();
+
+    res.json({ message: `Drink type "${drink.name}" marked as deleted` });
+    console.log(
+      chalk.yellow(`Drink type deleted: ${user.name} deleted ${drink.name}`)
+    );
   } catch (error) {
     console.error(chalk.red("Error deleting drink type:"), error);
     res.status(500).json({ error: "Failed to delete drink type" });
@@ -481,22 +486,27 @@ app.get("/api/leaderboard", requireAuth, async (req, res) => {
     const now = new Date();
 
     switch (period) {
-      case "week":
+      case "week": {
         const weekAgo = new Date(now);
         weekAgo.setDate(weekAgo.getDate() - 7);
         dateFilter = { timestamp: { $gte: weekAgo } };
         break;
-
-      case "month":
+      }
+      case "month": {
         const monthAgo = new Date(now);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         dateFilter = { timestamp: { $gte: monthAgo } };
         break;
-
-      case "all":
-        // No date filter for all time
+      }
+      case "year": {
+        const yearAgo = new Date(now);
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+        dateFilter = { timestamp: { $gte: yearAgo } };
         break;
-
+      }
+      case "all":
+        // no date filter
+        break;
       default:
         return res.status(400).json({ error: "Invalid period" });
     }
@@ -530,8 +540,167 @@ app.get("/api/leaderboard", requireAuth, async (req, res) => {
     const leaderboard = await CaffeineEntry.aggregate(pipeline);
     res.json(leaderboard);
   } catch (error) {
-    console.error(chalk.red("Error fetching leaderboard:"), error);
+    console.error("Error fetching leaderboard:", error);
     res.status(500).json({ error: "Failed to fetch leaderboard" });
+  }
+});
+
+// Chart data API
+app.get("/api/caffeine-chart", requireAuth, async (req, res) => {
+  try {
+    const { period = "week" } = req.query;
+    const now = new Date();
+
+    // Normalize today to midnight
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let startDate;
+    let labelFormatter;
+    let step;
+
+    switch (period) {
+      case "week": {
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 6); // 7 days total incl today
+        labelFormatter = (d) =>
+          d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        step = "day";
+        break;
+      }
+
+      case "month": {
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - 29); // 30 days incl today
+        labelFormatter = (d) =>
+          d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        step = "day";
+        break;
+      }
+
+      case "year": {
+        startDate = new Date(today);
+        startDate.setFullYear(today.getFullYear() - 1);
+        labelFormatter = (d) =>
+          d.toLocaleDateString("en-US", { month: "short" });
+        step = "month";
+        break;
+      }
+
+      case "all": {
+        // Fetch earliest and latest entries
+        const earliest = await CaffeineEntry.findOne().sort({ timestamp: 1 });
+        const latest = await CaffeineEntry.findOne().sort({ timestamp: -1 });
+
+        if (!earliest || !latest) {
+          return res.json({ labels: [], values: [] });
+        }
+
+        startDate = new Date(earliest.timestamp);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(latest.timestamp);
+        endDate.setHours(0, 0, 0, 0);
+
+        const daysSpan =
+          Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+        if (daysSpan <= 90) {
+          // Short span → daily
+          step = "day";
+          labelFormatter = (d) =>
+            d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            });
+        } else if (daysSpan <= 18 * 30) {
+          // Medium span → monthly
+          step = "month";
+          startDate.setDate(1); // align to month start
+          labelFormatter = (d) =>
+            d.toLocaleDateString("en-US", {
+              month: "short",
+              year: "numeric",
+            });
+        } else {
+          // Long span → yearly
+          step = "year";
+          startDate = new Date(startDate.getFullYear(), 0, 1);
+          labelFormatter = (d) => d.getFullYear().toString();
+        }
+        break;
+      }
+
+      default:
+        return res.status(400).json({ error: "Invalid period" });
+    }
+
+    // Query only relevant entries
+    const entries = await CaffeineEntry.find({
+      timestamp: { $gte: startDate, $lte: now },
+    });
+
+    // Group in memory
+    const buckets = {};
+
+    entries.forEach((entry) => {
+      const d = new Date(entry.timestamp);
+      let key;
+
+      if (step === "day") {
+        d.setHours(0, 0, 0, 0);
+        key = d.toISOString().slice(0, 10); // YYYY-MM-DD
+      } else if (step === "month") {
+        d.setDate(1);
+        d.setHours(0, 0, 0, 0);
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      } else if (step === "year") {
+        d.setMonth(0, 1); // Jan 1
+        d.setHours(0, 0, 0, 0);
+        key = `${d.getFullYear()}`;
+      }
+
+      if (!buckets[key]) buckets[key] = 0;
+      buckets[key] += entry.caffeineMg;
+    });
+
+    // Build labels & values with zero-padding
+    const labels = [];
+    const values = [];
+
+    if (step === "day") {
+      for (
+        let d = new Date(startDate);
+        d <= today;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const key = d.toISOString().slice(0, 10);
+        labels.push(labelFormatter(d));
+        values.push(buckets[key] || 0);
+      }
+    } else if (step === "month") {
+      const iter = new Date(startDate);
+      while (iter <= today) {
+        const key = `${iter.getFullYear()}-${String(
+          iter.getMonth() + 1
+        ).padStart(2, "0")}`;
+        labels.push(labelFormatter(iter));
+        values.push(buckets[key] || 0);
+        iter.setMonth(iter.getMonth() + 1);
+      }
+    } else if (step === "year") {
+      const iter = new Date(startDate);
+      while (iter <= today) {
+        const key = `${iter.getFullYear()}`;
+        labels.push(labelFormatter(iter));
+        values.push(buckets[key] || 0);
+        iter.setFullYear(iter.getFullYear() + 1);
+      }
+    }
+
+    res.json({ labels, values });
+  } catch (error) {
+    console.error("Error fetching chart data:", error);
+    res.status(500).json({ error: "Failed to fetch chart data" });
   }
 });
 
