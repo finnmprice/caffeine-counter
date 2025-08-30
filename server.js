@@ -281,6 +281,7 @@ app.get("/api/types", requireAuth, async (req, res) => {
 app.post("/api/types", requireAuth, async (req, res) => {
   try {
     const { name, imageUrl, sizes } = req.body;
+    const user = req.session.user;
 
     if (!name || !sizes || !Array.isArray(sizes) || sizes.length === 0) {
       return res.status(400).json({
@@ -313,7 +314,9 @@ app.post("/api/types", requireAuth, async (req, res) => {
 
     const savedType = await newType.save();
     res.status(201).json(savedType);
-    console.log(chalk.white(`New drink type added: ${savedType.name}`));
+    console.log(
+      chalk.white(`New drink type added: ${user.name} added ${savedType.name}`)
+    );
   } catch (error) {
     console.error(chalk.red("Error saving drink type:"), error);
     res.status(500).json({ error: "Failed to save drink type" });
