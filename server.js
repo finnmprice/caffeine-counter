@@ -4,7 +4,8 @@ const path = require("path");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const { OAuth2Client } = require("google-auth-library");
-import chalk from "chalk";
+
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,12 +22,12 @@ app.use(express.static("public"));
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  console.error(chalk.red("MONGODB_URI environment variable is not set"));
+  console.error("MONGODB_URI environment variable is not set");
   process.exit(1);
 }
 
 if (!GOOGLE_CLIENT_ID) {
-  console.error(chalk.red("GOOGLE_CLIENT_ID environment variable is not set"));
+  console.error("GOOGLE_CLIENT_ID environment variable is not set");
   process.exit(1);
 }
 
@@ -36,11 +37,9 @@ mongoose.connect(MONGODB_URI, {
 });
 
 const db = mongoose.connection;
-db.on("error", (err) =>
-  console.error(chalk.red("MongoDB connection error:"), err)
-);
+db.on("error", (err) => console.error("MongoDB connection error:", err));
 db.once("open", () => {
-  console.log(chalk.green("Connected to MongoDB Atlas"));
+  console.log("Connected to MongoDB Atlas");
 });
 
 // Session middleware
@@ -213,7 +212,7 @@ app.post("/api/auth/google", async (req, res) => {
         lastLoginAt: new Date(),
       });
       await user.save();
-      console.log(chalk.green(`New user created: ${email}`));
+      console.log(`New user created: ${email}`);
     } else {
       // Update last login
       user.lastLoginAt = new Date();
@@ -221,7 +220,7 @@ app.post("/api/auth/google", async (req, res) => {
         user.picture = picture;
       }
       await user.save();
-      console.log(chalk.cyan(`User logged in: ${email}`));
+      console.log(`User logged in: ${email}`);
     }
 
     // Store user in session
@@ -237,7 +236,7 @@ app.post("/api/auth/google", async (req, res) => {
       user: req.session.user,
     });
   } catch (error) {
-    console.error(chalk.red("Google auth error:"), error);
+    console.error("Google auth error:"), error;
     res.status(400).json({ error: "Invalid token" });
   }
 });
@@ -255,12 +254,12 @@ app.get("/api/auth/check", (req, res) => {
 app.post("/api/auth/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error(chalk.red("Failed to logout"), err);
+      console.error("Failed to logout", err);
       return res.status(500).json({ error: "Failed to logout" });
     }
     res.clearCookie("connect.sid");
     res.json({ success: true });
-    console.log(chalk.yellow("User logged out"));
+    console.log("User logged out");
   });
 });
 
@@ -272,7 +271,7 @@ app.get("/api/types", requireAuth, async (req, res) => {
     const types = await DrinkType.find({ deleted: false }).sort({ name: 1 });
     res.json(types);
   } catch (error) {
-    console.error(chalk.red("Error fetching drink types:"), error);
+    console.error("Error fetching drink types:", error);
     res.status(500).json({ error: "Failed to fetch drink types" });
   }
 });
@@ -314,11 +313,9 @@ app.post("/api/types", requireAuth, async (req, res) => {
 
     const savedType = await newType.save();
     res.status(201).json(savedType);
-    console.log(
-      chalk.white(`New drink type added: ${user.name} added ${savedType.name}`)
-    );
+    console.log(`New drink type added: ${user.name} added ${savedType.name}`);
   } catch (error) {
-    console.error(chalk.red("Error saving drink type:"), error);
+    console.error("Error saving drink type:", error);
     res.status(500).json({ error: "Failed to save drink type" });
   }
 });
@@ -331,7 +328,7 @@ app.get("/api/entries", requireAuth, async (req, res) => {
       .limit(50);
     res.json(entries);
   } catch (error) {
-    console.error(chalk.red("Error fetching entries:"), error);
+    console.error("Error fetching entries:", error);
     res.status(500).json({ error: "Failed to fetch entries" });
   }
 });
@@ -371,12 +368,10 @@ app.post("/api/entries", requireAuth, async (req, res) => {
     const savedEntry = await newEntry.save();
     res.status(201).json(savedEntry);
     console.log(
-      chalk.gray(
-        `New entry added for user ${req.session.user.email}: ${savedEntry.fullName} (${savedEntry.caffeineMg}mg)`
-      )
+      `New entry added for user ${req.session.user.email}: ${savedEntry.fullName} (${savedEntry.caffeineMg}mg)`
     );
   } catch (error) {
-    console.error(chalk.red("Error saving entry:"), error);
+    console.error("Error saving entry:", error);
     res.status(500).json({ error: "Failed to save entry" });
   }
 });
@@ -402,7 +397,7 @@ app.get("/api/total-today", requireAuth, async (req, res) => {
     );
     res.json({ total, count: todayEntries.length });
   } catch (error) {
-    console.error(chalk.red("Error calculating today's total:"), error);
+    console.error("Error calculating today's total:", error);
     res.status(500).json({ error: "Failed to calculate today's total" });
   }
 });
@@ -414,7 +409,7 @@ app.get("/api/total-all", requireAuth, async (req, res) => {
     const total = allEntries.reduce((sum, entry) => sum + entry.caffeineMg, 0);
     res.json({ total, count: allEntries.length });
   } catch (error) {
-    console.error(chalk.red("Error calculating total:"), error);
+    console.error("Error calculating total:", error);
     res.status(500).json({ error: "Failed to calculate total" });
   }
 });
@@ -443,11 +438,9 @@ app.delete("/api/entries/:id", requireAuth, async (req, res) => {
     await CaffeineEntry.findByIdAndDelete(id);
     res.json({ message: "Entry deleted successfully" });
 
-    console.log(
-      chalk.yellow(`Entry deleted: ${user.name} deleted ${drinkDesc}`)
-    );
+    console.log(`Entry deleted: ${user.name} deleted ${drinkDesc}`);
   } catch (error) {
-    console.error(chalk.red("Error deleting entry:"), error);
+    console.error("Error deleting entry:", error);
     res.status(500).json({ error: "Failed to delete entry" });
   }
 });
@@ -471,11 +464,9 @@ app.delete("/api/types/:id", requireAuth, async (req, res) => {
     await drink.save();
 
     res.json({ message: `Drink type "${drink.name}" marked as deleted` });
-    console.log(
-      chalk.yellow(`Drink type deleted: ${user.name} deleted ${drink.name}`)
-    );
+    console.log(`Drink type deleted: ${user.name} deleted ${drink.name}`);
   } catch (error) {
-    console.error(chalk.red("Error deleting drink type:"), error);
+    console.error("Error deleting drink type:", error);
     res.status(500).json({ error: "Failed to delete drink type" });
   }
 });
@@ -714,7 +705,7 @@ app.get("/", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(chalk.red("Unhandled error:"), err.stack);
+  console.error("Unhandled error:", err.stack);
   res.status(500).json({ error: "Something went wrong!" });
 });
 
